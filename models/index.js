@@ -32,6 +32,10 @@ Object.keys(db).forEach(modelName => {
   }
 })
 
+db.close = async () => {
+  await db.sequelize.close()
+};
+
 db.sequelize = sequelize
 db.Sequelize = Sequelize
 
