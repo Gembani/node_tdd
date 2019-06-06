@@ -15,7 +15,7 @@ afterAll(async () => {
 describe('GET /', () => {
   let response;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     response = await request(app).get('/');
   })
 
@@ -24,17 +24,34 @@ describe('GET /', () => {
   });
 });
 
-describe('GET /authors', () => {
+describe('POST /author', () => {
 
-  describe('With one or more authors in database', () => {
-    beforeEach(async () => {
-      //Create authors with factories
-    })
-    test('It should respond with a 200 status code', async () => {
-    });
-    test('It should return a json with all authors', async () => {
-    });
+  let response;
+  let data = {};
+  beforeAll(async () => {
+    data.firstName = 'Seb'
+    data.lastName = 'Ceb'
+    console.log(`data = ${JSON.stringify(data)}`)
+    response = await request(app).post('/author').send(data).set('Accept', 'application/json');
   })
+
+  test('It should respond with a 200 status code', async () => {
+    expect(response.statusCode).toBe(200);
+  });
+
+  test('It should return a json with the new author', async () => {
+    console.log(response.body)
+    expect(response.body.firstName).toBe(data.firstName);
+    expect(response.body.lastName).toBe(data.lastName);
+  });
+  test('It should create and retrieve a post for the selected author', async () => {
+    const author = await db.Author.findOne({where: {
+      id: response.body.id
+    }})
+    expect(author.id).toBe(response.body.id)
+    expect(author.firstName).toBe(data.firstName)
+    expect(author.lastName).toBe(data.lastName)
+  });
 
 });
 
