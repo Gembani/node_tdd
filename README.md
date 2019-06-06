@@ -23,7 +23,7 @@ sequelize init:model
 sequelize init:migrations
 ```
 
-# Databse creation (MYSQL VERSION)
+# Database creation (MYSQL VERSION)
 create /.env and /.env.test files like:
 
 ```
@@ -70,6 +70,14 @@ by
 const config = require(__dirname + '/../config/config')[env];
 ```
 
+and add 
+
+```javascript
+db.close = async () => {
+  await db.sequelize.close()
+};
+
+```
 ```
 NODE_ENV=development sequelize db:create
 ```
@@ -133,3 +141,93 @@ sequelize db:migrate
     Post.belongsTo(models.author)
   }
 ```
+
+Create app.js
+
+```javascript
+const express = require('express')
+const bodyParser = require('body-parser')
+const db = require('./models')
+
+const app = express()
+
+app.use(bodyParser.urlencoded({
+  extended: true
+}))
+
+app.use(express.static('app/public'))
+
+module.exports = app
+```
+
+Create server.js
+
+```javascript
+const db = require('./models')
+const app = require('./app')
+
+app.listen(8080, () => console.log('App listening on port 8080!'))
+
+```
+
+
+```
+npm install --save-dev babel-cli babel-preset-env jest supertest superagent
+```
+
+create jest.config.js  file
+
+```javascript
+module.exports = {
+  verbose: true,
+};
+
+```
+
+create a test file in spec folder (/spec/api.test.js)
+
+  ```
+const request = require('supertest')
+const app = require('../app')
+const db = require('../models');
+
+describe('GET /', () => {
+  let response;
+
+  beforeEach(async () => {
+    response = await request(app).get('/');
+  })
+
+  test('It should respond with a 200 status code', async () => {
+    expect(response.statusCode).toBe(200);
+  });
+});
+  ```
+
+create a helpers to clean database (/spec/helpers/cleanDb.js)
+
+```javascript
+const cleanDb = async (db) => {
+  await db.Author.truncate({ cascade: true });
+  await db.Post.truncate({ cascade: true });
+}
+module.exports = cleanDb
+
+```
+
+
+add these line in the spec file to clean the database before and after the tests
+
+```
+const cleanDb = require('./helpers/cleanDb')
+
+beforeAll(async () => {
+  await cleanDb(db)
+});
+
+afterAll(async () => {
+  await cleanDb(db)
+  await db.close()
+});
+```
+
