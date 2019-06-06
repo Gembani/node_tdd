@@ -20,10 +20,10 @@ module.exports = (app, db) => {
   //})
 
   //app.post('/author/:id/post', (req, res) => {
-    //db.Post.create({
-      //title: req.body.title,
-      //content: req.body.content,
-      //AuthorId: req.params.id
-    //}).then((result) => res.json(result))
+  //db.Post.create({
+  //title: req.body.title,
+  //content: req.body.content,
+  //AuthorId: req.params.id
+  //}).then((result) => res.json(result))
   //})
 }
