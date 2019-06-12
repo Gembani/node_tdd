@@ -11,7 +11,7 @@ app.use(bodyParser.urlencoded({
   extended: true
 }))
 
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
   res.status(200).send('Hello World!')
 })
 
@@ -21,6 +21,18 @@ app.post('/author', async (req, res) => {
     firstName: req.body.firstName,
     lastName: req.body.lastName
   }).then((result) => res.json(result))
+})
+
+app.get('/authors', async (req, res) => {
+  // await db.Author.findAll().then((result) => res.json(result))
+  await db.Author.findAll(
+    {order: [['id', 'ASC']]}
+  ).then((result) => {
+    console.log('++++++')
+    console.log(result)
+    return res.json(result)
+  })
+  
 })
 
 app.use(express.static('app/public'))

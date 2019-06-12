@@ -1,4 +1,5 @@
-switch (process.env.NODE_ENV) {
+const env = process.env.NODE_ENV || 'development'
+switch (env) {
 case 'development':
   require('dotenv').config({path: process.cwd() + '/.env'})
   break

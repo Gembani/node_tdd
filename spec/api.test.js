@@ -3,6 +3,11 @@ const app = require('../app')
 const db = require('../models');
 const cleanDb = require('./helpers/cleanDb')
 
+require('./factories/author').factory
+const factory = require('factory-girl').factory
+
+const expect = require('expect')
+
 beforeAll(async () => {
   await cleanDb(db)
 });
@@ -53,6 +58,53 @@ describe('POST /author', () => {
     expect(author.lastName).toBe(data.lastName)
   });
 
+});
+
+describe('GET /authors', () => {
+
+  let response;
+  let data = {};
+  let authors;
+
+  beforeAll(async () => await cleanDb(db))
+
+  describe('when there is no author in database', () => {
+    beforeAll(async () => {
+      response = await request(app).get('/authors').set('Accept', 'application/json');
+    })
+
+    test('It should not retrieve any author in db', async () => {
+      const authors = await db.Author.findAll()
+      expect(authors.length).toBe(0);
+    });
+    test('It should respond with a 200 status code', async () => {
+      expect(response.statusCode).toBe(200);
+    });
+    test('It should return a json with a void array', async () => {
+      expect(response.body).toStrictEqual([]);
+    });
+  })
+
+  describe('when there is one or more authors in database', () => {
+    beforeAll(async () => {
+      authors = await factory.createMany('author', 5)
+      response = await request(app).get('/authors').set('Accept', 'application/json')
+    })
+
+    test('It should not retrieve any author in db', async () => {
+      const authorsInDatabase = await db.Author.findAll()
+      expect(authorsInDatabase.length).toBe(5)
+    });
+    test('It should respond with a 200 status code', async () => {
+      expect(response.statusCode).toBe(200)
+    });
+    test.only('It should return a json with a void array', async () => {
+      console.log(authors)
+      for (i = 0; i < 5 ; i++) {
+        expect(response.body).toInclude(authors[i])
+      }
+    });
+  })
 });
 
 describe('POST /authors/:id/post', () => {

@@ -37,7 +37,8 @@ DB_HOST=your_host (usually 127.0.0.1)
   create config/config.js
 
   ```javascript
-  switch (process.env.NODE_ENV) {
+const env = process.env.NODE_ENV || 'development'
+switch (env) {
     case 'development':
       require('dotenv').config({path: process.cwd() + '/.env'})
         break
@@ -336,3 +337,97 @@ It passes too !
 
 Now, the basic functionality of this controller works well.
 ...
+
+Let's do the same thing with getting an author.
+```javascript
+
+describe('GET /authors', () => {
+
+  let response;
+  let data = {};
+
+  beforeAll(async () => await cleanDb(db))
+
+  describe('when there is no author in database', () => {
+    beforeAll(async () => {
+      response = await request(app).get('/authors').set('Accept', 'application/json');
+    })
+
+    test('It should respond with a 200 status code', async () => {
+      expect(response.statusCode).toBe(200);
+    });
+  })
+});
+```
+
+Just in case .
+
+```
+    test('It should not retrieve any author in db', async () => {
+      const authors = await db.Author.findAll()
+      expect(authors.length).toBe(0);
+    });
+    ```
+```
+///Expected 200, received 404.
+```
+
+Let's create the route.
+
+```
+app.get('/authors', (req, res) => {
+  res.status(200).send('Hello World!')
+})
+```
+
+Test OK !
+
+```
+test('It should return a json with a void array', async () => {
+  expect(response.body).toStrictEqual([]);
+});
+```
+
+Test fail
+
+```
+app.get('/authors', async (req, res) => {
+  await db.Author.findAll().then((result) => res.json(result))
+})
+```
+
+
+```
+npm install factory-girl 
+```
+
+
+Let's create factory in spec/factories/author.js
+
+```
+const factoryGirl = require('factory-girl')
+const adapter = new factoryGirl.SequelizeAdapter()
+factory = factoryGirl.factory
+factory.setAdapter(adapter)
+
+const Author = require('../../models').Author
+
+factory.define('author', Author, {
+  firstName: factory.sequence((n) => `firstName${n}`),
+  lastName: factory.sequence((n) => `lastName${n}`),
+})
+```
+
+import factory in the test file
+```
+require('./factories/author').factory
+const factory = require('factory-girl').factory
+```
+
+```
+npm install --save expect
+```
+
+```
+npm install --save-dev jest-extended
+```
