@@ -194,22 +194,23 @@ verbose: true,
 
 create a test file in spec folder (/spec/api.test.js)
 
-  ```
-  const request = require('supertest')
-  const app = require('../app')
-  const db = require('../models');
+```javascript
+const request = require('supertest')
+const app = require('../app')
+const db = require('../models');
 
-  describe('GET /', () => {
-      let response;
+describe('GET /', () => {
+    let response;
 
-      beforeEach(async () => {
-          response = await request(app).get('/');
-          })
+    beforeEach(async () => {
+  await cleanDb(db)
+        response = await request(app).get('/');
+        })
 
-      test('It should respond with a 200 status code', async () => {
-          expect(response.statusCode).toBe(200);
-          });
-      });
+    test('It should respond with a 200 status code', async () => {
+        expect(response.statusCode).toBe(200);
+        });
+    });
 ```
 
 create a helpers to clean database (/spec/helpers/cleanDb.js)
@@ -424,10 +425,387 @@ require('./factories/author').factory
 const factory = require('factory-girl').factory
 ```
 
-```
-npm install --save expect
+```javascript
+describe('when there is one or more authors in database', () => {
+  beforeAll(async () => {
+    authors = await factory.createMany('author', 5)
+    response = await request(app).get('/authors').set('Accept', 'application/json')
+  })
+
+  test('It should not retrieve any author in db', async () => {
+    const authorsInDatabase = await db.Author.findAll()
+    expect(authorsInDatabase.length).toBe(5)
+  });
+  test('It should respond with a 200 status code', async () => {
+    expect(response.statusCode).toBe(200)
+  });
+  test('It should return a json with a void array', async () => {
+    expect(response.body.length).toBe(5)
+    for (i = 0; i < 5 ; i++) {
+      const expectedBody = {
+        id: authors[i].id,
+        firstName: authors[i].firstName,
+        lastName: authors[i].lastName,
+      }
+      expect(response.body).toContainEqual(expectedBody)
+    }
+  });
+})
 ```
 
+Now we have another error. In the response body we have the authors but with timestamps. 
+Let's get rid of them.
+
+```javascript
+app.get('/authors', async (req, res) => {
+  await db.Author.findAll(
+    {attributes: ['id', 'firstName', 'lastName']}
+  ).then((result) => {
+    return res.json(result)
+  })
+})
 ```
-npm install --save-dev jest-extended
+
+And now all the tests pass !  
+
+Create Post factory
+
+```javascript
+const factoryGirl = require('factory-girl')
+const adapter = new factoryGirl.SequelizeAdapter()
+factory = factoryGirl.factory
+factory.setAdapter(adapter)
+
+const Post = require('../../models').Post
+
+factory.define('post', Post, {
+  title: factory.sequence((n) => `title${n}`),
+  content: factory.sequence((n) => `content${n}`),
+})
 ```
+
+Import Post factory in test file
+
+
+```javascript
+require('./factories/post').factory
+```
+
+```javascript
+describe('POST /post', () => {
+
+  let response
+  let data = {}
+  let post
+  let author
+
+  beforeAll(async () => await cleanDb(db))
+
+  describe('The author has one or multiple posts', () => {
+    beforeAll(async () => {
+      author = await factory.create('author')
+      post = await factory.build('post')
+      data.title = post.title
+      data.content = post.content
+      data.AuthorId = author.id
+      response = await request(app).post('/post').send(data).set('Accept', 'application/json')
+    })
+    test('It should respond with a 200 status code', async () => {
+      expect(response.statusCode).toBe(200);
+    });
+  })
+});
+```
+
+404 ! Create the new route !
+
+```javascript
+app.post('/post', async (req, res) => {
+  await db.Post.create({
+    title: req.body.title,
+    content: req.body.content,
+    AuthorId: req.body.AuthorId,
+  }).then((result) => res.json(result))
+})
+```
+
+It passes !
+
+```javascript
+test('It should create and retrieve a post for the selected author', async () => {
+  const postsInDatabase = await db.Post.findAll()
+  expect(postsInDatabase.length).toBe(1)
+  expect(postsInDatabase[0].title).toBe(post.title)
+  expect(postsInDatabase[0].content).toBe(post.content)
+});
+
+test('It should return a json with the author\'s posts', async () => {
+  expect(response.body.title).toBe(data.title);
+  expect(response.body.content).toBe(data.content);
+});
+```
+
+Let's add some tests
+
+```javascript
+test('It should create and retrieve a post for the selected author', async () => {
+  const postsInDatabase = await db.Post.findAll()
+  expect(postsInDatabase.length).toBe(1)
+  expect(postsInDatabase[0].title).toBe(post.title)
+  expect(postsInDatabase[0].content).toBe(post.content)
+});
+
+test('It should return a json with the author\'s posts', async () => {
+  expect(response.body.title).toBe(data.title);
+  expect(response.body.content).toBe(data.content);
+});
+
+test('The post should belong to the selected authors\' posts', async () => {
+  const posts = await author.getPosts()
+  expect(posts.length).toBe(1)
+  expect(posts[0].title).toBe(post.title)
+  expect(posts[0].content).toBe(post.content)
+})
+```
+
+And now it's all good !
+
+Now to finish, let's extract each resource's routes in a different file.
+
+Create a file: /app/api/post.js
+
+```javascript
+module.exports = (app, db) => {
+  app.post('/post', async (req, res) => {
+    await db.Post.create({
+      title: req.body.title,
+      content: req.body.content,
+      AuthorId: req.body.AuthorId,
+    }).then((result) => res.json(result))
+  })
+}
+```
+
+Delete this piece of code from app.js and require it.
+
+```javascript
+const postRoutes = require('./app/api/post')
+...
+postRoutes(app, db)
+```
+
+Do the same thing with author.
+
+Create a file: /app/api/author.js
+
+```javascript
+module.exports = (app, db) => {
+  app.post('/author', async (req, res) => {
+    await db.Author.create({
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+    }).then((result) => res.json(result))
+  })
+
+  app.get('/authors', async (req, res) => {
+    await db.Author.findAll(
+      {attributes: ['id', 'firstName', 'lastName']}
+    ).then((result) => {
+      return res.json(result)
+    })
+  })
+}
+
+```
+
+Now your app.js file should look like this:
+
+```javascript
+const express = require('express')
+const bodyParser = require('body-parser')
+const db = require('./models')
+const postRoutes = require('./app/api/post')
+const authorRoutes = require('./app/api/author')
+
+const app = express()
+
+app.use(bodyParser.json())
+app.use(bodyParser.urlencoded({
+  extended: true
+}))
+app.use(express.static('app/public'))
+
+app.get('/', async (req, res) => {
+  res.status(200).send('Hello World!')
+})
+
+
+postRoutes(app, db)
+authorRoutes(app, db)
+module.exports = app
+
+```
+
+And your test file should look like this:
+
+```javascript
+const request = require('supertest')
+const app = require('../app')
+const db = require('../models');
+const cleanDb = require('./helpers/cleanDb')
+
+require('./factories/author').factory
+require('./factories/post').factory
+const factory = require('factory-girl').factory
+
+beforeAll(async () => {
+  await cleanDb(db)
+});
+
+afterAll(async () => {
+  await cleanDb(db)
+  await db.close()
+});
+
+describe('GET /', () => {
+  let response;
+
+  beforeAll(async () => {
+    await cleanDb(db)
+    response = await request(app).get('/');
+  })
+
+  test('It should respond with a 200 status code', async () => {
+    expect(response.statusCode).toBe(200);
+  });
+});
+
+describe('POST /author', () => {
+
+  let response;
+  let data = {};
+  beforeAll(async () => {
+    data.firstName = 'Seb'
+    data.lastName = 'Ceb'
+    console.log(`data = ${JSON.stringify(data)}`)
+    response = await request(app).post('/author').send(data).set('Accept', 'application/json');
+  })
+
+  test('It should respond with a 200 status code', async () => {
+    expect(response.statusCode).toBe(200);
+  });
+
+  test('It should return a json with the new author', async () => {
+    console.log(response.body)
+    expect(response.body.firstName).toBe(data.firstName);
+    expect(response.body.lastName).toBe(data.lastName);
+  });
+  test('It should create and retrieve a post for the selected author', async () => {
+    const author = await db.Author.findOne({where: {
+      id: response.body.id
+    }})
+    expect(author.id).toBe(response.body.id)
+    expect(author.firstName).toBe(data.firstName)
+    expect(author.lastName).toBe(data.lastName)
+  });
+
+});
+
+describe('GET /authors', () => {
+
+  let response
+  let authors
+
+  beforeAll(async () => await cleanDb(db))
+
+  describe('when there is no author in database', () => {
+    beforeAll(async () => {
+      response = await request(app).get('/authors').set('Accept', 'application/json');
+    })
+
+    test('It should not retrieve any author in db', async () => {
+      const authors = await db.Author.findAll()
+      expect(authors.length).toBe(0);
+    });
+    test('It should respond with a 200 status code', async () => {
+      expect(response.statusCode).toBe(200);
+    });
+    test('It should return a json with a void array', async () => {
+      expect(response.body).toStrictEqual([]);
+    });
+  })
+
+  describe('when there is one or more authors in database', () => {
+    beforeAll(async () => {
+      authors = await factory.createMany('author', 5)
+      response = await request(app).get('/authors').set('Accept', 'application/json')
+    })
+
+    test('It should not retrieve any author in db', async () => {
+      const authorsInDatabase = await db.Author.findAll()
+      expect(authorsInDatabase.length).toBe(5)
+    });
+    test('It should respond with a 200 status code', async () => {
+      expect(response.statusCode).toBe(200)
+    });
+    test('It should return a json with a void array', async () => {
+      expect(response.body.length).toBe(5)
+      for (i = 0; i < 5 ; i++) {
+        const expectedBody = {
+          id: authors[i].id,
+          firstName: authors[i].firstName,
+          lastName: authors[i].lastName,
+        }
+        expect(response.body).toContainEqual(expectedBody)
+      }
+    });
+  })
+});
+
+describe('POST /post', () => {
+
+  let response
+  let data = {}
+  let post
+  let author
+
+  beforeAll(async () => await cleanDb(db))
+
+  describe('The author has one or multiple posts', () => {
+    beforeAll(async () => {
+      author = await factory.create('author')
+      post = await factory.build('post')
+      data.title = post.title
+      data.content = post.content
+      data.AuthorId = author.id
+      response = await request(app).post('/post').send(data).set('Accept', 'application/json')
+    })
+
+    test('It should respond with a 200 status code', async () => {
+      expect(response.statusCode).toBe(200);
+    });
+
+    test('It should create and retrieve a post for the selected author', async () => {
+      const postsInDatabase = await db.Post.findAll()
+      expect(postsInDatabase.length).toBe(1)
+      expect(postsInDatabase[0].title).toBe(post.title)
+      expect(postsInDatabase[0].content).toBe(post.content)
+    });
+    
+    test('It should return a json with the author\'s posts', async () => {
+      expect(response.body.title).toBe(data.title);
+      expect(response.body.content).toBe(data.content);
+    });
+
+    test('The post should belong to the selected authors\' posts', async () => {
+      const posts = await author.getPosts()
+      expect(posts.length).toBe(1)
+      expect(posts[0].title).toBe(post.title)
+      expect(posts[0].content).toBe(post.content)
+    })
+  })
+});
+```
+
+Run the tests.
+They still all pass ! We did not break anything !

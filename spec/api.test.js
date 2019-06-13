@@ -4,9 +4,8 @@ const db = require('../models');
 const cleanDb = require('./helpers/cleanDb')
 
 require('./factories/author').factory
+require('./factories/post').factory
 const factory = require('factory-girl').factory
-
-const expect = require('expect')
 
 beforeAll(async () => {
   await cleanDb(db)
@@ -21,6 +20,7 @@ describe('GET /', () => {
   let response;
 
   beforeAll(async () => {
+    await cleanDb(db)
     response = await request(app).get('/');
   })
 
@@ -62,9 +62,8 @@ describe('POST /author', () => {
 
 describe('GET /authors', () => {
 
-  let response;
-  let data = {};
-  let authors;
+  let response
+  let authors
 
   beforeAll(async () => await cleanDb(db))
 
@@ -98,27 +97,60 @@ describe('GET /authors', () => {
     test('It should respond with a 200 status code', async () => {
       expect(response.statusCode).toBe(200)
     });
-    test.only('It should return a json with a void array', async () => {
-      console.log(authors)
+    test('It should return a json with a void array', async () => {
+      expect(response.body.length).toBe(5)
       for (i = 0; i < 5 ; i++) {
-        expect(response.body).toInclude(authors[i])
+        const expectedBody = {
+          id: authors[i].id,
+          firstName: authors[i].firstName,
+          lastName: authors[i].lastName,
+        }
+        expect(response.body).toContainEqual(expectedBody)
       }
     });
   })
 });
 
-describe('POST /authors/:id/post', () => {
+describe('POST /post', () => {
+
+  let response
+  let data = {}
+  let post
+  let author
+
+  beforeAll(async () => await cleanDb(db))
 
   describe('The author has one or multiple posts', () => {
-    beforeEach(async () => {
-      //Create posts for author with factories
+    beforeAll(async () => {
+      author = await factory.create('author')
+      post = await factory.build('post')
+      data.title = post.title
+      data.content = post.content
+      data.AuthorId = author.id
+      response = await request(app).post('/post').send(data).set('Accept', 'application/json')
     })
-    test('It should respond with a 200 status code', async () => {
-    });
-    test('It should create and retrieve a post for the selected author', async () => {
-    });
-    test('It should return a json with the author\'s posts', async () => {
-    });
-  })
 
+    test('It should respond with a 200 status code', async () => {
+      expect(response.statusCode).toBe(200);
+    });
+
+    test('It should create and retrieve a post for the selected author', async () => {
+      const postsInDatabase = await db.Post.findAll()
+      expect(postsInDatabase.length).toBe(1)
+      expect(postsInDatabase[0].title).toBe(post.title)
+      expect(postsInDatabase[0].content).toBe(post.content)
+    });
+    
+    test('It should return a json with the author\'s posts', async () => {
+      expect(response.body.title).toBe(data.title);
+      expect(response.body.content).toBe(data.content);
+    });
+
+    test('The post should belong to the selected authors\' posts', async () => {
+      const posts = await author.getPosts()
+      expect(posts.length).toBe(1)
+      expect(posts[0].title).toBe(post.title)
+      expect(posts[0].content).toBe(post.content)
+    })
+  })
 });

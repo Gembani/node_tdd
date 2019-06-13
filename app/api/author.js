@@ -1,5 +1,16 @@
 module.exports = (app, db) => {
-  //app.get('/author/:id', (req, res) => {
-  //console.log('AUTHOR GET')
-  //})
+  app.post('/author', async (req, res) => {
+    await db.Author.create({
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+    }).then((result) => res.json(result))
+  })
+
+  app.get('/authors', async (req, res) => {
+    await db.Author.findAll(
+      {attributes: ['id', 'firstName', 'lastName']}
+    ).then((result) => {
+      return res.json(result)
+    })
+  })
 }
