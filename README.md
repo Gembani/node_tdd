@@ -3,9 +3,12 @@ npm init -y
 ```
 
 ```
-npm i express sequelize mysql2 body-parser --save
+npm i express sequelize body-parser --save
 ```
 
+```
+npm i pg
+```
 
 ```
 npm i -g sequelize-cli
@@ -16,7 +19,7 @@ npm install dotenv --save
 ```
 
 ```
-sequelize init:model
+sequelize init:models
 ```
 
 ```
@@ -29,22 +32,23 @@ create /.env and /.env.test files like:
 ```
 DB_NAME=your_db_name
 DB_USER=your_db_username
-  DB_PASSWORD=your_db_password
+DB_PASSWORD=your_db_password
 DB_HOST=your_host (usually 127.0.0.1)
-  DB_DIALECT=postgres
-  ```
+DB_DIALECT=postgres
+```
 
   create config/config.js
 
   ```javascript
 const env = process.env.NODE_ENV || 'development'
+
 switch (env) {
-    case 'development':
-      require('dotenv').config({path: process.cwd() + '/.env'})
-        break
-    case 'test':
-        require('dotenv').config({path: process.cwd() + '/.env.test'})
-  }
+  case 'development':
+    require('dotenv').config({path: process.cwd() + '/.env'})
+      break
+  case 'test':
+    require('dotenv').config({path: process.cwd() + '/.env.test'})
+}
 
 const connection_details = {
 username: process.env.DB_USER,
@@ -70,15 +74,12 @@ by
 ```
 const config = require(__dirname + '/../config/config')[env];
 ```
-
-and add 
-
+and add before module export
 ```javascript
+
 db.close = async () => {
   await db.sequelize.close()
 };
-
-```
 ```
 NODE_ENV=development sequelize db:create
 ```
@@ -94,9 +95,16 @@ sequelize model:generate --name Post --attributes title:string,content:text
 ```
 
 ```
-sequelize db:migrate```
+sequelize db:migrate
+```
 
+```
+NODE_ENV=test sequelize db:migrate
+```
+
+```
 sequelize migration:create --name='add-author-id-to-posts'
+```
 
 Replace the migration file with:
 
@@ -131,7 +139,7 @@ sequelize db:migrate
 
 ```javascript
 Author.associate = (models) => {
-  Author.hasMany(models.post)
+  Author.hasMany(models.Post)
 }
 ```
 
@@ -139,7 +147,7 @@ Author.associate = (models) => {
 
 ```javascript
 Post.associate = (models) => {
-  Post.belongsTo(models.author)
+  Post.belongsTo(models.Author)
 }
 ```
 
@@ -174,25 +182,27 @@ app.listen(8080, () => console.log('App listening on port 8080!'))
 
 
 ```
-npm install --save-dev babel-cli babel-preset-env jest supertest superagent
+npm install --save-dev babel-cli babel-preset-env jest supertest
 ```
 
-add this line to your scripts in package.json
+replace the test script in your package.json
 
 ```
-"test": "jest --runInBand spec"
+"test": "jest --runInBand --forceExit spec"
 
 ```
-create jest.config.js  file
 
-```javascript
+<!-- create jest.config.js  file -->
+
+
+<!-- ```javascript
 module.exports = {
 verbose: true,
 };
 
-```
+``` -->
 
-create a test file in spec folder (/spec/api.test.js)
+create a /spec folder and create a test file in in (/spec/api.test.js)
 
 ```javascript
 const request = require('supertest')
@@ -200,56 +210,55 @@ const app = require('../app')
 const db = require('../models');
 
 describe('GET /', () => {
-    let response;
+  let response;
 
-    beforeEach(async () => {
-  await cleanDb(db)
-        response = await request(app).get('/');
-        })
+  beforeEach(async () => {
+    await cleanDb(db)
+    response = await request(app).get('/');
+  })
 
-    test('It should respond with a 200 status code', async () => {
-        expect(response.statusCode).toBe(200);
-        });
-    });
+  test('It should respond with a 200 status code', async () => {
+    expect(response.statusCode).toBe(200);
+  });
+});
 ```
 
-create a helpers to clean database (/spec/helpers/cleanDb.js)
+create a helpers to clean our little database (/spec/helpers/cleanDb.js)
 
   ```javascript
-  const cleanDb = async (db) => {
-    await db.Author.truncate({ cascade: true });
-    await db.Post.truncate({ cascade: true });
-  }
+const cleanDb = async (db) => {
+  await db.Author.truncate({ cascade: true });
+  await db.Post.truncate({ cascade: true });
+}
 module.exports = cleanDb
-
 ```
 
 
 add these line in the spec file to clean the database before and after the tests
+Import our helper at the top of the spec file
 
 ```javascript
 const cleanDb = require('./helpers/cleanDb')
+```
 
+Let's launch our clean before and after all tests
+
+```javascript
 beforeAll(async () => {
-    await cleanDb(db)
-    });
+  await cleanDb(db)
+});
 
 afterAll(async () => {
-    await cleanDb(db)
-    await db.close()
-    });
+  await cleanDb(db)
+  await db.close()
+});
 ```
 
 ```
 npm run test
 ```
 
-  ```
-expect(received).toBe(expected) // Object.is equality
-
-  Expected: 200
-  Received: 404
-  ```
+Here screenshot 1
 
 The route was not found (404). Let's create it
 
@@ -261,9 +270,10 @@ app.get('/', (req, res) => {
 })
 ```
 
+Here screenshot 2
 Test pass !
 
-Let's write a new test 
+Let's add a new test block in api.test.js
 
 ```javascript
 describe('POST /author', () => {
@@ -272,8 +282,8 @@ describe('POST /author', () => {
   let data = {};
 
   beforeAll(async () => {
-    data.firstName = 'Seb'
-    data.lastName = 'Ceb'
+    data.firstName = 'John'
+    data.lastName = 'Wick'
     response = await request(app).post('/author').send(data);
   })
 
@@ -284,10 +294,11 @@ describe('POST /author', () => {
 
 ```
 
+Same as above.
 404 error ! Let's add the route (app.js)
 
 ```javascript
-app.post('/author', (req, res) => {
+app.post('/author', async (req, res) => {
   res.status(200).send('Author post')
 })
 ```
@@ -303,6 +314,7 @@ test('It should return a json with the new author', async () => {
 });
 ```
 
+SCREENSHOT 3
 The tests fail.
 Let's modify our controller
 
@@ -317,6 +329,7 @@ app.post('/author', async (req, res) => {
 
 ```
 
+SCREENSHOT 4
 Test passed !
 
 
@@ -334,12 +347,13 @@ Now we want to know if the author has been really created in database
 
 ```
 
+SCREENSHOT 5
 It passes too !
 
 Now, the basic functionality of this controller works well.
 ...
 
-Let's do the same thing with getting an author.
+Let's do the same thing with getting all authors.
 ```javascript
 
 describe('GET /authors', () => {
@@ -354,6 +368,11 @@ describe('GET /authors', () => {
       response = await request(app).get('/authors').set('Accept', 'application/json');
     })
 
+    test('It should not retrieve any author in db', async () => {
+      const authors = await db.Author.findAll()
+      expect(authors.length).toBe(0);
+    });
+
     test('It should respond with a 200 status code', async () => {
       expect(response.statusCode).toBe(200);
     });
@@ -361,14 +380,6 @@ describe('GET /authors', () => {
 });
 ```
 
-Just in case .
-
-```
-    test('It should not retrieve any author in db', async () => {
-      const authors = await db.Author.findAll()
-      expect(authors.length).toBe(0);
-    });
-    ```
 ```
 ///Expected 200, received 404.
 ```
@@ -376,11 +387,12 @@ Just in case .
 Let's create the route.
 
 ```
-app.get('/authors', (req, res) => {
+app.get('/authors', async (req, res) => {
   res.status(200).send('Hello World!')
 })
 ```
 
+SCREENSHOT 6
 Test OK !
 
 ```
