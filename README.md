@@ -408,7 +408,8 @@ app.get('/authors', async (req, res) => {
   await db.Author.findAll().then((result) => res.json(result))
 })
 ```
-
+SCREENSHOT 7
+TEST ok
 
 ```
 npm install factory-girl 
@@ -478,6 +479,7 @@ app.get('/authors', async (req, res) => {
 })
 ```
 
+SCREENSHOT 8
 And now all the tests pass !  
 
 Create Post factory
@@ -542,20 +544,6 @@ app.post('/post', async (req, res) => {
 ```
 
 It passes !
-
-```javascript
-test('It should create and retrieve a post for the selected author', async () => {
-  const postsInDatabase = await db.Post.findAll()
-  expect(postsInDatabase.length).toBe(1)
-  expect(postsInDatabase[0].title).toBe(post.title)
-  expect(postsInDatabase[0].content).toBe(post.content)
-});
-
-test('It should return a json with the author\'s posts', async () => {
-  expect(response.body.title).toBe(data.title);
-  expect(response.body.content).toBe(data.content);
-});
-```
 
 Let's add some tests
 
