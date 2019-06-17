@@ -1,22 +1,46 @@
+# Project initialisation
+
+Let's create a new folder.
+
+```
+mkdir node_tdd && cd node_tdd
+```
+
+Let's initialize a new node project
+
 ```
 npm init -y
 ```
+
+We want to do some TDD while creating a simple API.
+In this tutorial, we chose to use ExpressJS as a web framework, Sequelize as the ORM and a parsing middleware body-parse.
 
 ```
 npm i express sequelize body-parser --save
 ```
 
+We will use Postgres database, but you can as well use Mysql as well.
+
 ```
 npm i pg
 ```
+
+If your "sequelize" command is not found, you can fix it by installing the sequelize-cli.
 
 ```
 npm i -g sequelize-cli
 ```
 
+To keep the project clean, we will use dotenv package in order to get the dabasese credentials
+
 ```
 npm install dotenv --save
 ```
+
+Now, the base packages of our project are ready to be used. We can start the configuration.
+
+# Sequelize set up
+We first initialize our models and migrations folders with sequelize. This will create 2 new folders: a empty migrations folder, and models folder with an index.js file in it.
 
 ```
 sequelize init:models
@@ -27,17 +51,25 @@ sequelize init:migrations
 ```
 
 # Database creation (MYSQL VERSION)
-create /.env and /.env.test files like:
+
+Create /.env and /.env.test files like:
+We have to create 2 files in project's root.
+/.env
+/.env.test
+
+We will keep our databases credentials there.
+You can for example name your db `node_tdd` and you test db `node_tdd_test`
+Fill the below informations in each of these files.
 
 ```
 DB_NAME=your_db_name
 DB_USER=your_db_username
 DB_PASSWORD=your_db_password
-DB_HOST=your_host (usually 127.0.0.1)
+DB_HOST=127.0.0.1
 DB_DIALECT=postgres
 ```
 
-  create config/config.js
+Create a file named `/config/config.js`
 
   ```javascript
 const env = process.env.NODE_ENV || 'development'
@@ -50,36 +82,36 @@ switch (env) {
     require('dotenv').config({path: process.cwd() + '/.env.test'})
 }
 
-const connection_details = {
-username: process.env.DB_USER,
-          password: process.env.DB_PASSWORD,
-          database: process.env.DB_NAME,
-          host: process.env.DB_HOST,
-          dialect: process.env.DB_DIALECT,
-}
-
 module.exports = {
-  'test': connection_details,
-  'development': connection_details,
-  'production': connection_details
+  username: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  host: process.env.DB_HOST,
+  dialect: process.env.DB_DIALECT,
 }
 ```
-in /model/index.js, replace
 
-```
+In `/model/index.js`, replace this line
+
+```javascript
 const config = require(__dirname + '/../config/config.json')[env];
 ```
-by
 
+by this one
+
+```javascript
+const config = require(__dirname + '/../config/config');
 ```
-const config = require(__dirname + '/../config/config')[env];
-```
-and add before module export
+
+In this same file, we add a function in the `db` object which allows us to close the connection with the database.
+We will need this to write our tests later.
+
 ```javascript
 
 db.close = async () => {
   await db.sequelize.close()
 };
+
 ```
 NODE_ENV=development sequelize db:create
 ```
@@ -568,6 +600,7 @@ test('The post should belong to the selected authors\' posts', async () => {
 })
 ```
 
+SCREENSHOT 9
 And now it's all good !
 
 Now to finish, let's extract each resource's routes in a different file.
