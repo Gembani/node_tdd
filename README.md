@@ -314,6 +314,7 @@ app.get('/', (req, res) => {
 ```
 
 ![](screenshots/2.png)
+
 Once the route is created, the test is green !
 So this was a pretty basic test, just to illustrate the TDD.
 Now let's add a new test block. We want a route to create some author in database.
@@ -358,6 +359,7 @@ test('It should return a json with the new author', async () => {
 ```
 
 ![](screenshots/3.png)
+
 The tests fail.
 Let's modify our controller.
 
@@ -373,6 +375,7 @@ app.post('/author', async (req, res) => {
 ```
 
 ![](screenshots/4.png)
+
 Tests are now green !
 
 Now we want to know if the author has been really created in database.
@@ -391,9 +394,11 @@ Let's add a test which will ensure this.
 ```
 
 ![](screenshots/5.png)
+
 It passes too ! No need to modify our controller. The basic functionality of this controller works pretty well.
 
 Let's do the same thing with getting all authors. We want that the `/GET authors` route gives us all the authors in our db.
+First, we write some tests with no author in db.
 
 ```javascript
 describe('GET /authors', () => {
@@ -429,32 +434,41 @@ app.get('/authors', async (req, res) => {
 ```
 
 ![](screenshots/6.png)
-Test OK !
 
-```
+Tests OK !
+We want the response to be a void array.
+
+
+```javascript
 test('It should return a json with a void array', async () => {
   expect(response.body).toStrictEqual([]);
 });
 ```
 
-Test fail
+Test red.
+Let's modify some code in the controller.
 
-```
+```javascript
 app.get('/authors', async (req, res) => {
   await db.Author.findAll().then((result) => res.json(result))
 })
 ```
+
 ![](screenshots/7.png)
-TEST ok
+
+Tests are now all green !
+
+The following tests will need to have some data already created.
+In order to do this we will use factories. Factories are a very useful tool to build or create objects with some automatically generated default values.
+Let's install Factory Girl.
 
 ```
 npm install factory-girl 
 ```
 
+Let's create a factory file in `spec/factories/author.js`
 
-Let's create factory in spec/factories/author.js
-
-```
+```javascript
 const factoryGirl = require('factory-girl')
 const adapter = new factoryGirl.SequelizeAdapter()
 factory = factoryGirl.factory
@@ -468,11 +482,16 @@ factory.define('author', Author, {
 })
 ```
 
-import factory in the test file
-```
+Defining this way the factory will alow us to have authors with always differents names. (by default)
+
+Let's import the factory in the test file
+
+```javascript
 require('./factories/author').factory
 const factory = require('factory-girl').factory
 ```
+
+And add a test block. This time we write some tests in the case when we have some already created author in db.
 
 ```javascript
 describe('when there is one or more authors in database', () => {
@@ -502,7 +521,7 @@ describe('when there is one or more authors in database', () => {
 })
 ```
 
-Now we have another error. In the response body we have the authors but with timestamps. 
+Now we have another error. In the response body, we can see the authors but with timestamps. 
 Let's get rid of them.
 
 ```javascript
@@ -516,9 +535,10 @@ app.get('/authors', async (req, res) => {
 ```
 
 ![](screenshots/8.png)
+
 And now all the tests pass !  
 
-Create Post factory
+Let's now create a Post factory, the same way we did with Author.
 
 ```javascript
 const factoryGirl = require('factory-girl')
@@ -534,12 +554,14 @@ factory.define('post', Post, {
 })
 ```
 
-Import Post factory in test file
+Require Post factory in test file
 
 
 ```javascript
 require('./factories/post').factory
 ```
+
+Now we can write a basic test for the new route we want to create.
 
 ```javascript
 describe('POST /post', () => {
@@ -567,7 +589,8 @@ describe('POST /post', () => {
 });
 ```
 
-404 ! Create the new route !
+404 error!
+Go to the app.js file and create the new route.
 
 ```javascript
 app.post('/post', async (req, res) => {
@@ -581,7 +604,7 @@ app.post('/post', async (req, res) => {
 
 It passes !
 
-Let's add some tests
+Let's add some tests, to ensure the POST post route is working correctly.
 
 ```javascript
 test('It should create and retrieve a post for the selected author', async () => {
@@ -605,11 +628,12 @@ test('The post should belong to the selected authors\' posts', async () => {
 ```
 
 ![](screenshots/9.png)
-And now it's all good !
 
-Now to finish, let's extract each resource's routes in a different file.
+And now it's all good ! All the functionnalities listed in this test file are working properly.
 
-Create a file: /app/api/post.js
+Now to finish, let's extract each resource's routes/controllers in a different file.
+
+Create a file: `/app/api/post.js`
 
 ```javascript
 module.exports = (app, db) => {
@@ -844,5 +868,5 @@ describe('POST /post', () => {
 });
 ```
 
-Run the tests.
+Run the tests one last time to check if refactoring broke anything.
 They still all pass ! We did not break anything !
