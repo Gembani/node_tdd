@@ -113,11 +113,22 @@ db.close = async () => {
 };
 
 ```
+Let's now create our databases ! We can do it manually, but with all the informations we provided to Sequelize, it can do it for us.
+
+```
 NODE_ENV=development sequelize db:create
 ```
+
 ```
 NODE_ENV=test sequelize db:create
 ```
+
+Our databases are now created.
+Time to write some migrations. We want a simple database with 2 tables. Author and Post.
+Author will have multiple Posts.
+Post will belong to one Author.
+
+Sequelize can create the model and the associated migration with one command.
 
 ```
 sequelize model:generate --name Author --attributes firstName:string,lastName:string
@@ -126,13 +137,18 @@ sequelize model:generate --name Author --attributes firstName:string,lastName:st
 sequelize model:generate --name Post --attributes title:string,content:text
 ```
 
+Let's get this all migrated, in both environments.
+
 ```
-sequelize db:migrate
+NODE_ENV=development sequelize db:migrate
 ```
 
 ```
 NODE_ENV=test sequelize db:migrate
 ```
+
+In order to create a `belongs to` association, we have to create a migration.
+Our Post table must have a AuthorId column.
 
 ```
 sequelize migration:create --name='add-author-id-to-posts'
@@ -143,18 +159,16 @@ Replace the migration file with:
 ```javascript
 module.exports = {
 up: (queryInterface, Sequelize) => {
-      return queryInterface.addColumn('Posts', 'AuthorId',
-          {
-type: Sequelize.INTEGER,
-references: {
-model: 'Authors', // name of Target model
-key: 'id', // key in Target model that we're referencing
+  return queryInterface.addColumn('Posts', 'AuthorId', {
+    type: Sequelize.INTEGER,
+    references: {
+    model: 'Authors', // name of Target model
+    key: 'id', // key in Target model that we're referencing
+    },
+  onUpdate: 'CASCADE',
+  onDelete: 'SET NULL',
+  })
 },
-onUpdate: 'CASCADE',
-onDelete: 'SET NULL',
-}
-)
-      },
 
 down: (queryInterface) => {
         return queryInterface.removeColumn('Posts', 'AuthorId')
@@ -162,12 +176,17 @@ down: (queryInterface) => {
 }
 ```
 
+```
+NODE_ENV=development sequelize db:migrate
+```
 
 ```
-sequelize db:migrate
+NODE_ENV=test sequelize db:migrate
 ```
 
-# In author model
+Let's add the associations in model files
+
+In Author model:
 
 ```javascript
 Author.associate = (models) => {
@@ -175,15 +194,15 @@ Author.associate = (models) => {
 }
 ```
 
-# In post model
-
+In Post model:
 ```javascript
 Post.associate = (models) => {
   Post.belongsTo(models.Author)
 }
 ```
 
-Create app.js
+Create /app.js 
+We will put our routes/controllers in this file.
 
 ```javascript
 const express = require('express')
@@ -202,39 +221,28 @@ app.use(express.static('app/public'))
 module.exports = app
 ```
 
-Create server.js
+Create /server.js
 
 ```javascript
 const db = require('./models')
 const app = require('./app')
 
-app.listen(8080, () => console.log('App listening on port 8080!'))
-
+app.listen(3000, () => console.log('App listening on port 3000!'))
 ```
 
+The app is now ready. Let's install all the packages in order to start the TDD.
 
 ```
-npm install --save-dev babel-cli babel-preset-env jest supertest
+npm install --save-dev jest supertest babel-cli babel-preset-env
 ```
 
-replace the test script in your package.json
+Replace the test script in your `package.json`
 
 ```
 "test": "jest --runInBand --forceExit spec"
-
 ```
 
-<!-- create jest.config.js  file -->
-
-
-<!-- ```javascript
-module.exports = {
-verbose: true,
-};
-
-``` -->
-
-create a /spec folder and create a test file in in (/spec/api.test.js)
+Create a /spec folder and create a test file in it. (/spec/api.test.js)
 
 ```javascript
 const request = require('supertest')
@@ -255,7 +263,8 @@ describe('GET /', () => {
 });
 ```
 
-create a helpers to clean our little database (/spec/helpers/cleanDb.js)
+We want to clean our database before each test. In order to do that, we create a helper function which will handle this.
+(`/spec/helpers/cleanDb.js`)
 
   ```javascript
 const cleanDb = async (db) => {
@@ -266,14 +275,15 @@ module.exports = cleanDb
 ```
 
 
-add these line in the spec file to clean the database before and after the tests
-Import our helper at the top of the spec file
+Now the helper is created, let's use it in our spec file.
+Add these line in `app.test.js` to clean the database before and after the tests.
+Import the helper at the top of the file.
 
 ```javascript
 const cleanDb = require('./helpers/cleanDb')
 ```
 
-Let's launch our clean before and after all tests
+We want to clean the database before and after all tests
 
 ```javascript
 beforeAll(async () => {
@@ -286,15 +296,17 @@ afterAll(async () => {
 });
 ```
 
+Let's launch our tests with jest.
+
 ```
 npm run test
 ```
 
-Here screenshot 1
+SCREENSHOT 1
+![Drag Racing](screenshots/1.png)
 
-The route was not found (404). Let's create it
-
-In app.js
+The test received an 404 response code.
+That means that the was not found. Let's create a pretty basic one in `app.js` file.
 
 ```javascript
 app.get('/', (req, res) => {
@@ -303,9 +315,9 @@ app.get('/', (req, res) => {
 ```
 
 Here screenshot 2
-Test pass !
-
-Let's add a new test block in api.test.js
+Once the route is created, the test is green !
+So this was a pretty basic test, just to illustrate the TDD.
+Now let's add a new test block. We want a route to create some author in database.
 
 ```javascript
 describe('POST /author', () => {
@@ -323,23 +335,23 @@ describe('POST /author', () => {
     expect(response.statusCode).toBe(200);
   });
 });
-
 ```
 
-Same as above.
-404 error ! Let's add the route (app.js)
+For now we just want a positive response code. (200). But once we run the test, we get a 404 instead of 200.
+Let's add the route.
 
+`app.js`
 ```javascript
 app.post('/author', async (req, res) => {
-  res.status(200).send('Author post')
+  res.status(200).send('POST author')
 })
 ```
 
 Tests OK !
 
-But we want some more functionality with this route. We want actually to create a new author with a firstName and lastName and get a json of this author.
+But we want some more functionalities with this route. We want actually to create a new author with a firstName and lastName and get a json of this author.
 
-```
+```javascript
 test('It should return a json with the new author', async () => {
   expect(response.body.firstName).toBe(data.firstName);
   expect(response.body.lastName).toBe(data.lastName);
@@ -348,7 +360,7 @@ test('It should return a json with the new author', async () => {
 
 SCREENSHOT 3
 The tests fail.
-Let's modify our controller
+Let's modify our controller.
 
 
 ```javascript
@@ -362,12 +374,12 @@ app.post('/author', async (req, res) => {
 ```
 
 SCREENSHOT 4
-Test passed !
+Tests are now green !
 
+Now we want to know if the author has been really created in database.
+Let's add a test which will ensure this.
 
-Now we want to know if the author has been really created in database
-
-```
+```javascript
   test('It should create and retrieve a post for the selected author', async () => {
     const author = await db.Author.findOne({where: {
       id: response.body.id
@@ -380,14 +392,11 @@ Now we want to know if the author has been really created in database
 ```
 
 SCREENSHOT 5
-It passes too !
+It passes too ! No need to modify our controller. The basic functionality of this controller works pretty well.
 
-Now, the basic functionality of this controller works well.
-...
+Let's do the same thing with getting all authors. We want that the `/GET authors` route gives us all the authors in our db.
 
-Let's do the same thing with getting all authors.
 ```javascript
-
 describe('GET /authors', () => {
 
   let response;
@@ -412,13 +421,9 @@ describe('GET /authors', () => {
 });
 ```
 
-```
-///Expected 200, received 404.
-```
+Tests are red. Let's create the route.
 
-Let's create the route.
-
-```
+```javascript
 app.get('/authors', async (req, res) => {
   res.status(200).send('Hello World!')
 })
