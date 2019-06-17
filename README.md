@@ -313,7 +313,7 @@ app.get('/', (req, res) => {
 })
 ```
 
-Here screenshot 2
+![](screenshots/2.png)
 Once the route is created, the test is green !
 So this was a pretty basic test, just to illustrate the TDD.
 Now let's add a new test block. We want a route to create some author in database.
@@ -357,7 +357,7 @@ test('It should return a json with the new author', async () => {
 });
 ```
 
-SCREENSHOT 3
+![](screenshots/3.png)
 The tests fail.
 Let's modify our controller.
 
@@ -372,7 +372,7 @@ app.post('/author', async (req, res) => {
 
 ```
 
-SCREENSHOT 4
+![](screenshots/4.png)
 Tests are now green !
 
 Now we want to know if the author has been really created in database.
@@ -390,7 +390,7 @@ Let's add a test which will ensure this.
 
 ```
 
-SCREENSHOT 5
+![](screenshots/5.png)
 It passes too ! No need to modify our controller. The basic functionality of this controller works pretty well.
 
 Let's do the same thing with getting all authors. We want that the `/GET authors` route gives us all the authors in our db.
@@ -428,7 +428,7 @@ app.get('/authors', async (req, res) => {
 })
 ```
 
-SCREENSHOT 6
+![](screenshots/6.png)
 Test OK !
 
 ```
@@ -444,7 +444,7 @@ app.get('/authors', async (req, res) => {
   await db.Author.findAll().then((result) => res.json(result))
 })
 ```
-SCREENSHOT 7
+![](screenshots/7.png)
 TEST ok
 
 ```
@@ -515,7 +515,7 @@ app.get('/authors', async (req, res) => {
 })
 ```
 
-SCREENSHOT 8
+![](screenshots/8.png)
 And now all the tests pass !  
 
 Create Post factory
@@ -604,7 +604,7 @@ test('The post should belong to the selected authors\' posts', async () => {
 })
 ```
 
-SCREENSHOT 9
+![](screenshots/9.png)
 And now it's all good !
 
 Now to finish, let's extract each resource's routes in a different file.
