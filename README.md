@@ -302,8 +302,7 @@ Let's launch our tests with jest.
 npm run test
 ```
 
-SCREENSHOT 1
-![Drag Racing](screenshots/1.png)
+![](screenshots/1.png)
 
 The test received an 404 response code.
 That means that the was not found. Let's create a pretty basic one in `app.js` file.
