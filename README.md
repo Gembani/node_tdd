@@ -1,6 +1,6 @@
 # Node API TDD
 
-In the node ecosystem, We haven't been able to find an article describing the way we prefer to practice TDD internally. We are describing how we prefer to practice TDD in node in an article you can find [here](https://www.gembani.com/fr/).
+In the node ecosystem, We haven't been able to find an article describing the way we prefer to practice TDD internally. We are describing how we prefer to practice TDD in node in an article you can find [here](https://www.gembani.com/en/blog/node-api-tdd.html).
 
 ### Prerequisites
 
