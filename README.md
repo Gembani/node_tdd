@@ -1,13 +1,13 @@
 # Node API TDD
 
-In the node ecosystem, We haven't been able to find an article describing the way we prefer to practice TDD internally. We are describing how we prefer to practice TDD in node in this article.
+In the node ecosystem, We haven't been able to find an article describing the way we prefer to practice TDD internally. We are describing how we prefer to practice TDD in node in an article you can find [here](https://www.gembani.com/fr/).
 
 ### Prerequisites
 
 You will need `node` to be installed on your computer.
-You can download it here depending on your OS.
+You can download it [here](https://nodejs.org/en/download/) depending on your OS.
 
-[Node](https://nodejs.org/en/download/)
+
 
 ### Installing
 
