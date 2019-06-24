@@ -5,8 +5,7 @@ In the node ecosystem, We haven't been able to find an article describing the wa
 ### Prerequisites
 
 You will need `node` to be installed on your computer.
-You can download it [here](https://nodejs.org/en/download/) depending on your OS.
-
+You can download it [here](https://nodejs.org/en/download/).
 
 
 ### Installing
