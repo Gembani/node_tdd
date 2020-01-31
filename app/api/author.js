@@ -1,6 +1,7 @@
+const Author = require('../../mongo_models/author')
 module.exports = (app, db) => {
   app.post('/author', async (req, res) => {
-    await db.Author.create({
+    await Author.create({
       firstName: req.body.firstName,
       lastName: req.body.lastName,
     }).then((result) => res.json(result))
