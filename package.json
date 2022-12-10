@@ -14,7 +14,7 @@
     "body-parser": "^1.19.0",
     "dotenv": "^8.0.0",
     "expect": "^24.8.0",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "factory-girl": "^5.0.4",
     "faker": "^4.1.0",
     "mysql2": "^1.6.5",
